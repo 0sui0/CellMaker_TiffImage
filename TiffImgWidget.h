@@ -16,17 +16,26 @@ public:
     TiffImgWidget(QWidget *parent);
 
     bool OpenImage(QString filePath);
-private:
-    const int windowWidth = 600;
-    const int windowHeight = 500;
+    void SetMagnify(int m);
+    void ShowFullImg();
 
+public slots:
+    void reMagnify(int m);
+
+private:
+    //the size of window
+    const int windowWidth = 960;
+    const int windowHeight = 640;
+    //img
     QString mFilePath;
     QImage *mQtImg;
     openslide_t *mImg;
     uchar *imgData;
-    int mLevel;
+
+    int mMagnify;
     QLabel *mLab;
 
+    void DivideLine();
 
 };
 
