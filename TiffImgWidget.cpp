@@ -5,15 +5,17 @@
 #include <iostream>
 #include <QDebug>
 #include <QPainter>
+#include <QMouseEvent>
 
 TiffImgWidget::TiffImgWidget()
 {
     this->resize(windowWidth, windowHeight);
     this->setMinimumSize(windowWidth, windowHeight);
     mLab = new QLabel(this);
-    mMagnify = 5;
+    mMagnify = 8;
     mQtImg = NULL;
     imgData = NULL;
+    mIsLarge = 0;
 }
 
 TiffImgWidget::TiffImgWidget(QWidget *parent):QWidget(parent)
@@ -21,15 +23,16 @@ TiffImgWidget::TiffImgWidget(QWidget *parent):QWidget(parent)
     this->resize(windowWidth, windowHeight);
     this->setMinimumSize(windowWidth, windowHeight);
     mLab = new QLabel(this);
-    mMagnify = 5;
+    mMagnify = 8;
     mQtImg = NULL;
     imgData = NULL;
+    mIsLarge = 0;
 }
 
-bool TiffImgWidget::OpenImage(QString filePath)
+bool TiffImgWidget::OpenImage(const QString &filePath)
 {
     //file path
-    QByteArray ba = filePath.toLatin1();
+    QByteArray ba = filePath->toLatin1();
     const char *cFilePath = ba.data();
     mFilePath = filePath;
 
@@ -62,6 +65,49 @@ void TiffImgWidget::ShowFullImg()
     this->DivideLine();
     mLab->setPixmap(QPixmap::fromImage(*mQtImg));
 }
+void TiffImgWidget::ShowPartImg(int x,int y,int dx, int dy)
+{
+    int64_t w,h;
+    openslide_get_level0_dimensions(mImg,&w,&h);
+    int level = openslide_get_best_level_for_downsample(mImg,std::max((double)w/dx,(double)h/dy));
+    int64_t lw, lh;
+    openslide_get_layer_dimensions(mImg,level,&lw,&lh);
+    dx = dx*lw/w;
+    dy = dy*lh/h;
+
+    if(imgData) delete imgData;
+    if(mQtImg) delete mQtImg;
+
+    imgData = new uchar[dx*dy*4];
+    openslide_read_region(mImg,(uint32_t*)imgData,x,y,level,dx,dy);
+    mQtImg = new QImage(imgData, dx, dy, QImage::Format_ARGB32);
+    *mQtImg = mQtImg->scaled(windowWidth,windowHeight,Qt::KeepAspectRatio);
+    mLab->setPixmap(QPixmap::fromImage(*mQtImg));
+}
+void TiffImgWidget::mousePressEvent(QMouseEvent *event)
+{
+    if(mIsLarge) return ;
+    mIsLarge = 1;
+    clickPartImg(event->x(), event->y());
+}
+//(x,y) position of mouse click
+void TiffImgWidget::clickPartImg(int x,int y)
+{
+    x /= mQtImg->width()/mMagnify;
+    y /= mQtImg->height()/mMagnify;
+
+    int64_t w,h;
+    openslide_get_level0_dimensions(mImg,&w,&h);
+    int dx=w/mMagnify, dy=h/mMagnify;
+    x*=dx;
+    y*=dy;
+
+    dx+=margin*2;
+    dy+=margin*2;
+    x = std::max(x-margin,0);
+    y = std::max(y-margin,0);
+    ShowPartImg(x,y,dx,dy);
+}
 
 void TiffImgWidget::SetMagnify(int m){
     this->mMagnify = m;
@@ -84,13 +130,20 @@ void TiffImgWidget::DivideLine(){
 
 void TiffImgWidget::reMagnify(int m){
     switch (m) {
-    case 0:SetMagnify(4);
+    case 0:SetMagnify(8);
         break;
-    case 1:SetMagnify(5);
+    case 1:SetMagnify(16);
         break;
-    case 2:SetMagnify(8);
+    case 2:SetMagnify(20);
         break;
     default:
         break;
+    }
+}
+void TiffImgWidget::backToEntirety()
+{
+    if(mIsLarge){
+        mIsLarge = 0;
+        ShowFullImg();
     }
 }

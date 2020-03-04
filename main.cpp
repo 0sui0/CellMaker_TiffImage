@@ -1,13 +1,8 @@
 
 #include <QtWidgets/QApplication>
-#include <QtWidgets/QLabel>
-#include <QtPlugin>
-#include <QDebug>
-#include <QImageReader>
-#include "openslide.h"
-#include <iostream>
 #include <QComboBox>
 #include <QLayout>
+#include <QPushButton>
 #include "TiffImgWidget.h"
 int main(int argc, char *argv[])
 {
@@ -26,14 +21,19 @@ int main(int argc, char *argv[])
     QComboBox magnifyBox;
     btnBox.addWidget(&magnifyBox);
 
-    magnifyBox.addItem(QWidget::tr("x4"));
-    magnifyBox.addItem(QWidget::tr("x5"));
     magnifyBox.addItem(QWidget::tr("x8"));
-    magnifyBox.setCurrentIndex(1);
+    magnifyBox.addItem(QWidget::tr("x16"));
+    magnifyBox.addItem(QWidget::tr("x20"));
+    magnifyBox.setCurrentIndex(0);
 
     mainLayout.addLayout(&btnBox);
     mainWin.setLayout(&mainLayout);
 
+    QPushButton backBtn;
+    backBtn.setText("back");
+    btnBox.addWidget(&backBtn);
+
+    QObject::connect(&backBtn, SIGNAL(clicked(bool)), &w, SLOT(backToEntirety()));
     QObject::connect(&magnifyBox, SIGNAL(currentIndexChanged(int)) ,&w, SLOT(reMagnify(int)));
     w.OpenImage("C:\\Users\\sui\\Desktop\\CellMarker\\t.tif");
 
